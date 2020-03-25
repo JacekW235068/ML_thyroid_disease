@@ -2,6 +2,7 @@ from os import listdir
 from os.path import isfile, join
 import sys, os
 import re
+import random
 def findValueTypes(path):
     valuetypeslist = []
     regexp1 = re.compile(r"[A-Z,a-z,',',\s,0-9]*\:\s*[A-Z,a-z,',',\s]*\.")
@@ -13,9 +14,9 @@ def findValueTypes(path):
                 countAdded = 0
                 for line in file:
                     expline = regexp1.search(line)
-                    if expline: 
+                    if expline:
                         count +=1
-                        valtype = expline.string[expline.string.find(':')+1:expline.string.find('.')] 
+                        valtype = expline.string[expline.string.find(':')+1:expline.string.find('.')]
                         valtype = valtype.strip()
                         expline = expline.string[0:expline.string.find(":")]
                         expline = expline.replace(' ','_')
@@ -37,7 +38,7 @@ def findClasses(path):
                 countAdded = 0
                 for line in file:
                     test = regexp1.search(line)
-                    if not test and ';' not in line: 
+                    if not test and ';' not in line:
                         line = line.strip()
                         if '.' in line:
                             line = line[:line.index('.')]
@@ -102,11 +103,58 @@ def createMETAclasses(path, minimalCasesCount = -1, silent = False):
     if silent:
         sys.stdout = sys.__stdout__
 
-#some function creating dataset
+def write_dataset_header(path, fout):
+    values = findValueTypes(path)
+    fout.write(values[0].split('|')[0])
+    for value in values[1:]:
+        fout.write(',')
+        fout.write(value.split('|')[0])
+    fout.write('\n')
+
+class_in_data_regex = re.compile(r".*,(.*)\.|\d+")
+def find_class_in_data_line(line, classes):
+    class_search = class_in_data_regex.search(line)
+    if class_search:
+        return classes.index(class_search.group(1))
+
+def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
+    classes = findClasses(path)
+    classcount = countClasses(dir, classes)
+    fout = open("data.dat", "wt")
+    onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
+    lines_per_class = list(map(lambda _: [], classes))
+
+    write_dataset_header(path, fout)
+
+    for fileName in onlyfiles:
+        if ".data" in fileName or ".test" in fileName:
+            with open(path + fileName, "r") as file:
+                for line in file:
+                    class_index = find_class_in_data_line(line, classes)
+                    lines_per_class[class_index].append(line.split('|')[0] + '\n') # cut the strange number at end of data line
+
+    all_lines_of_dataset = []
+    for class_index, lines_of_class in enumerate(lines_per_class):
+        class_name = classes[class_index]
+        if len(lines_of_class) < minimalCasesCount:
+            print("Minimal cases count not reached for class {}".format(class_name))
+            continue
+        elif len(lines_of_class) >= targetCasesCount:
+            print("Class {} extends the target, picking random {} cases.".format(class_name, targetCasesCount))
+            all_lines_of_dataset.extend(random.sample(lines_of_class, targetCasesCount))
+        else:
+            print("{} cases of class {} will be randomly copied to fulfill {} target cases.".format(len(lines_of_class), class_name, targetCasesCount))
+            for _ in range(targetCasesCount):
+                all_lines_of_dataset.append(random.choice(lines_of_class));
+
+    random.shuffle(all_lines_of_dataset)
+    for line in all_lines_of_dataset:
+        fout.write(line)
 
 dir = "thyroid-disease/"
 createMETAvalues(dir)
 createMETAclasses(dir)
+createDataset(dir)
 # values = findValueTypes(dir)
 # print("-----------------------------------------------------------")
 # classes = findClasses(dir)
