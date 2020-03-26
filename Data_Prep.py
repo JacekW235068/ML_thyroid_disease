@@ -105,10 +105,10 @@ def createMETAclasses(path, minimalCasesCount = -1, silent = False):
 
 def write_dataset_header(path, fout):
     values = findValueTypes(path)
-    fout.write(values[0].split('|')[0])
-    for value in values[1:]:
-        fout.write(',')
+    for value in values:
         fout.write(value.split('|')[0])
+        fout.write(',')
+    fout.write('class')
     fout.write('\n')
 
 class_in_data_regex = re.compile(r".*,(.*)\.|\d+")
