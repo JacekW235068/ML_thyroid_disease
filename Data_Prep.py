@@ -145,7 +145,7 @@ def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
         else:
             print("{} cases of class {} will be randomly copied to fulfill {} target cases.".format(len(lines_of_class), class_name, targetCasesCount))
             for _ in range(targetCasesCount):
-                all_lines_of_dataset.append(random.choice(lines_of_class));
+                all_lines_of_dataset.append(random.choice(lines_of_class))
 
     random.shuffle(all_lines_of_dataset)
     for line in all_lines_of_dataset:
