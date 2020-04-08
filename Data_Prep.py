@@ -151,10 +151,34 @@ def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
     for line in all_lines_of_dataset:
         fout.write(line)
 
+def removeColumn(filepath, columnName):
+    file = open(filepath, 'rt')
+    if os.path.exists("temp.dat"):
+        os.remove("temp.dat")   
+    outputFile = open ("temp.dat", 'wt')
+    header = file.readline().strip().split(',')
+    if columnName in header:
+        columnIndex = header.index(columnName)
+        del header[columnIndex]
+        header = ','.join(header)
+        outputFile.write(header)
+        for line in file:
+            line = line.split(',')
+            del line[columnIndex]
+            line = ','.join(line)
+            outputFile.write(line)
+    file.close()
+    outputFile.close()
+    os.remove(filepath)
+    os.rename(r'temp.dat',filepath)
+
+
+
 dir = "thyroid-disease/"
-createMETAvalues(dir)
-createMETAclasses(dir)
-createDataset(dir)
+removeColumn("data.dat", 'sex')
+# createMETAvalues(dir)
+# createMETAclasses(dir)
+# createDataset(dir)
 # values = findValueTypes(dir)
 # print("-----------------------------------------------------------")
 # classes = findClasses(dir)

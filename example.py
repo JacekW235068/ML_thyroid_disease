@@ -10,17 +10,17 @@ TEST_DATA_URL = "https://storage.googleapis.com/tf-datasets/titanic/eval.csv"
 
 # labal value to predict
 LABEL_COLUMN = 'survived'
-LABELS = [0, 1]
+
 
 def show_batch(dataset):
-  for batch, label in dataset.take(1):
+  for batch, _ in dataset.take(1):
     for key, value in batch.items():
       print("{:20s}: {}".format(key,value.numpy()))
 
 def get_dataset(file_path, **kwargs):
   dataset = tf.data.experimental.make_csv_dataset(
       file_path,
-      batch_size=10, # Artificially small to make examples easier to show.
+      batch_size=5, # Artificially small to make examples easier to show.
       label_name=LABEL_COLUMN,
       na_value="?",
       num_epochs=1,
@@ -48,7 +48,7 @@ def normalize_numeric_data(data, mean, std):
 
 train_file_path = tf.keras.utils.get_file("train.csv", TRAIN_DATA_URL)
 test_file_path = tf.keras.utils.get_file("eval.csv", TEST_DATA_URL)
-np.set_printoptions(precision=3, suppress=True)
+np.set_printoptions(precision=3, suppress=True)#just some printing shit
 
 #data from file using copy paste function from tutorial
 raw_train_data = get_dataset(train_file_path)
@@ -96,7 +96,6 @@ desc = pd.read_csv(train_file_path)[NUMERIC_FEATURES].describe()
 MEAN = np.array(desc.T['mean'])
 STD = np.array(desc.T['std'])
 
-# See what you just created.
 normalizer = functools.partial(normalize_numeric_data, mean=MEAN, std=STD)
 
 numeric_column = tf.feature_column.numeric_column('numeric', normalizer_fn=normalizer, shape=[len(NUMERIC_FEATURES)])
