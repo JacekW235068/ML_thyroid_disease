@@ -109,7 +109,7 @@ def createMETAclasses(path, minimalCasesCount = -1, silent = False):
 def write_dataset_header(path, fout):
     values = findValueTypes(path)
     for value in values:
-        fout.write(value.split('|')[0])
+        fout.write(value.split('|')[0].replace(" ", "_"))
         fout.write(',')
     fout.write('class')
     fout.write('\n')
@@ -329,7 +329,7 @@ def mockValues(filepath, output):
     print(classes[0])
     print(classCases[0])
     print("-----------------------------------------------------")
-    i = 0 
+    i = 0
     while i < len(classes):
         classStats[i] = getDataStatsForMocking(classCases[i])
         print("finished class stats for" + classes[i])
@@ -368,8 +368,8 @@ def mockValues(filepath, output):
 dir = "thyroid-disease/"
 # removeRangeColumns('data.dat',['age','sex'])
 # convertTextLabelsToNumbers('data.dat')
+createDataset(dir)
 mockValues('data.dat', 'output.dat')
-#createDataset(dir)
 # values = findValueTypes(dir)
 # print("-----------------------------------------------------------")
 # classes = findClasses(dir)
