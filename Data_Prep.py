@@ -154,7 +154,7 @@ def merge_data_from_all_files(path):
 
     data = data_data + test_data
     classes = data_classes + test_classes
-    negative_index = classNames.index("negative")
+    negative_index = str(classNames.index("negative"))
     result = []
     for i, line in enumerate(data):
         if len(classes[i]) > 1 and negative_index in classes[i]:
@@ -368,6 +368,8 @@ def mockValues(filepath, output):
 dir = "thyroid-disease/"
 # removeRangeColumns('data.dat',['age','sex'])
 # convertTextLabelsToNumbers('data.dat')
+createMETAclasses(dir)
+createMETAvalues(dir)
 createDataset(dir)
 mockValues('data.dat', 'output.dat')
 # values = findValueTypes(dir)
