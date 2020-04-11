@@ -3,6 +3,9 @@ from os.path import isfile, join
 import sys, os
 import re
 import random
+import io
+import statistics
+
 def findValueTypes(path):
     valuetypeslist = []
     regexp1 = re.compile(r"[A-Z,a-z,',',\s,0-9]*\:\s*[A-Z,a-z,',',\s]*\.")
@@ -117,68 +120,256 @@ def find_class_in_data_line(line, classes):
     if class_search:
         return classes.index(class_search.group(1))
 
+data_without_class_regex = re.compile(r"(.*),.*\.|\d+")
+def get_data_without_class(line):
+    search = data_without_class_regex.search(line)
+    if search:
+        return search.group(1)
+
+def merge_data_from_all_files(path):
+    classNames = findClasses(path)
+    datafiles = [f for f in listdir(path) if isfile(join(path, f)) and ".data" in f]
+    testfiles = [f for f in listdir(path) if isfile(join(path, f)) and ".test" in f]
+
+    data_data = []
+    data_classes = []
+    test_data = []
+    test_classes = []
+    with open(path + datafiles[0], "r") as file:
+        for line in file:
+            data_data.append(get_data_without_class(line))
+            data_classes.append(set())
+    with open(path + testfiles[0], "r") as file:
+        for line in file:
+            test_data.append(get_data_without_class(line))
+            test_classes.append(set())
+    for fileName in datafiles:
+        with open(path + fileName, "r") as file:
+            for i, line in enumerate(file):
+                data_classes[i].add(str(find_class_in_data_line(line, classNames)))
+    for fileName in testfiles:
+        with open(path + fileName, "r") as file:
+            for i, line in enumerate(file):
+                test_classes[i].add(str(find_class_in_data_line(line, classNames)))
+
+    data = data_data + test_data
+    classes = data_classes + test_classes
+    negative_index = classNames.index("negative")
+    result = []
+    for i, line in enumerate(data):
+        if len(classes[i]) > 1 and negative_index in classes[i]:
+            classes[i].remove(negative_index)
+        result.append(line + "," + " ".join(classes[i]) + "\n")
+    return result
+
 def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
     classes = findClasses(path)
-    classcount = countClasses(dir, classes)
     fout = open("data.dat", "wt")
-    onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
-    lines_per_class = list(map(lambda _: [], classes))
 
     write_dataset_header(path, fout)
+    merged_data = merge_data_from_all_files(path)
 
-    for fileName in onlyfiles:
-        if ".data" in fileName or ".test" in fileName:
-            with open(path + fileName, "r") as file:
-                for line in file:
-                    class_index = find_class_in_data_line(line, classes)
-                    lines_per_class[class_index].append(line.split('|')[0] + '\n') # cut the strange number at end of data line
-
-    all_lines_of_dataset = []
-    for class_index, lines_of_class in enumerate(lines_per_class):
-        class_name = classes[class_index]
-        if len(lines_of_class) < minimalCasesCount:
-            print("Minimal cases count not reached for class {}".format(class_name))
-            continue
-        elif len(lines_of_class) >= targetCasesCount:
-            print("Class {} extends the target, picking random {} cases.".format(class_name, targetCasesCount))
-            all_lines_of_dataset.extend(random.sample(lines_of_class, targetCasesCount))
-        else:
-            print("{} cases of class {} will be randomly copied to fulfill {} target cases.".format(len(lines_of_class), class_name, targetCasesCount))
-            for _ in range(targetCasesCount):
-                all_lines_of_dataset.append(random.choice(lines_of_class))
-
-    random.shuffle(all_lines_of_dataset)
-    for line in all_lines_of_dataset:
+    for line in merged_data:
         fout.write(line)
 
 def removeColumn(filepath, columnName):
     file = open(filepath, 'rt')
     if os.path.exists("temp.dat"):
-        os.remove("temp.dat")   
+        os.remove("temp.dat")
     outputFile = open ("temp.dat", 'wt')
     header = file.readline().strip().split(',')
-    if columnName in header:
-        columnIndex = header.index(columnName)
-        del header[columnIndex]
-        header = ','.join(header)
-        outputFile.write(header)
-        for line in file:
-            line = line.split(',')
-            del line[columnIndex]
-            line = ','.join(line)
-            outputFile.write(line)
+    if columnName not in header:
+        return
+    columnIndex = header.index(columnName)
+    del header[columnIndex]
+    header = ','.join(header)
+    outputFile.write(header + "\n")
+    for line in file:
+        line = line.split(',')
+        del line[columnIndex]
+        line = ','.join(line)
+        outputFile.write(line)
     file.close()
     outputFile.close()
-    os.remove(filepath)
-    os.rename(r'temp.dat',filepath)
+    # os.remove(filepath)
+    # os.rename(r'temp.dat',filepath)
 
+def findEmptyColumns(filepath,minimumPercentage = 1, emptychar = '?'):
+    minimumPercentage = minimumPercentage/100.0
+    linescount = 0
+    file = open(filepath, 'rt')
+    header = file.readline().strip().split(',')
+    valuesCount = [0] * len(header)
+    for line in file:
+        linescount += 1
+        line = line.strip().split(',')
+        i = 0
+        while i < len(line):
+            if line[i] != emptychar:
+                valuesCount[i] += 1
+            i += 1
+    file.close()
+    i = 0
+    empty = []
+    while i < len(header):
+        if valuesCount[i]/linescount <= minimumPercentage:
+            empty.append(header[i])
+        i += 1
+    return empty
 
+def findkeywordColumns(filepath, keyword):
+    file = open(filepath, 'rt')
+    header = file.readline().strip().split(',')
+    file.close()
+    i = 0
+    columns = []
+    while i < len(header):
+        if keyword in header[i]:
+            columns.append(header[i])
+        i += 1
+    return columns
+
+def removeRangeColumns(filepath, columnNames):
+    file = open(filepath, 'rt')
+    if os.path.exists("temp.dat"):
+        os.remove("temp.dat")
+    outputFile = open ("temp.dat", 'wt')
+    header = file.readline().strip().split(',')
+    columnIndexes = []
+    for columnName in columnNames:
+        if columnName in header:
+            columnIndexes.append(header.index(columnName))
+    columnIndexes.sort()
+    i = 0
+    #this is readable btw
+    while i < len(columnIndexes):
+        columnIndexes[i] -= i
+        i += 1
+    for columnIndex in columnIndexes:
+        del header[columnIndex]
+    header = ','.join(header)
+    outputFile.write(header + "\n")
+    for line in file:
+        line = line.split(',')
+        for columnIndex in columnIndexes:
+            del line[columnIndex]
+        line = ','.join(line)
+        outputFile.write(line)
+    file.close()
+    outputFile.close()
+    # os.remove(filepath)
+    # os.rename(r'temp.dat',filepath)
+
+def getDataStatsForMocking(dataSet):
+    columnIsNumeric = []
+    categoricalData = []
+    categoricalDataCount = []
+    numericData = []
+    with open("values.meta", "r") as file:
+        for line in file:
+            line = line[line.index('|')+1:]
+            if "continuous" in line:
+                columnIsNumeric.append(True)
+            else:
+                columnIsNumeric.append(False)
+            numericData.append([])
+            categoricalData.append([])
+            categoricalDataCount.append([])
+    with io.StringIO(dataSet) as file:
+        for line in file:
+            line = line.strip().split(',')
+            i = 0
+            while i < len(columnIsNumeric):
+                if '?' in line[i]:
+                    pass
+                elif columnIsNumeric[i]:
+                    value = float(line[i])
+                    numericData[i].append(value)
+                else:
+                    if line[i] not in categoricalData[i]:
+                         categoricalData[i].append(line[i])
+                         categoricalDataCount[i].append(0)
+                    categoricalDataCount[i][categoricalData[i].index(line[i])] += 1 #what the fuck is this
+                i += 1
+    numeric_variance = []
+    numeric_avg = []
+    for data in numericData:
+        if len(data) > 2:
+            numeric_variance.append(statistics.stdev(data))
+            numeric_avg.append(sum(data)/len(data))
+        else:
+            numeric_variance.append(0)
+            numeric_avg.append(0)
+    return columnIsNumeric, categoricalData, categoricalDataCount, numeric_variance, numeric_avg
+
+def sum(array):
+    sum = 0
+    for num in array:
+        sum += num
+    return sum
+
+def mockValues(filepath, output):
+    classes = []
+    classCases = []
+    classStats = []
+    with open("class.meta", "r") as file:
+        for line in file:
+            classes.append(line[:line.index('|')])
+            classCases.append("")
+            classStats.append([])
+    with open(filepath, "r") as file:
+        file.readline()
+        for line in file:
+            i = 0
+            while i < len(classes):
+                if classes[i] in line:
+                    classCases[i] += line
+                i+=1
+    print("-----------------------------------------------------")
+    print(classes[0])
+    print(classCases[0])
+    print("-----------------------------------------------------")
+    i = 0 
+    while i < len(classes):
+        classStats[i] = getDataStatsForMocking(classCases[i])
+        print("finished class stats for" + classes[i])
+        i += 1
+    print("writing output file")
+    if os.path.exists(output):
+        os.remove(output)
+    with open(filepath, "r") as file:
+        with open(output, "wt") as outputFile:
+            for line in file:
+                i = 0
+                while i < len(classes):
+                    if classes[i] in line:
+                        break
+                    i+=1
+                line = line.strip().split(',')
+                j = 0
+                while j < len(line)-1:
+                    if '?' in line[j]:
+                        if classStats[i][0][j]:
+                            start = classStats[i][4][j] - classStats[i][3][j]
+                            stop = classStats[i][4][j] + classStats[i][3][j]
+                            line[j] = str(round(random.uniform(start, stop),3))
+                        else:
+                            sumOfCases = sum(classStats[i][2][j])
+                            rand = random.random()*sumOfCases
+                            k = 0
+                            while rand > 0:
+                                rand -= classStats[i][2][j][k]
+                                k += 1
+                            line[j] = classStats[i][1][j][k-1]
+                    j +=1
+                outputFile.write(','.join(line) + '\n')
+    print("Done")
 
 dir = "thyroid-disease/"
-removeColumn("data.dat", 'sex')
-# createMETAvalues(dir)
-# createMETAclasses(dir)
-# createDataset(dir)
+# removeRangeColumns('data.dat',['age','sex'])
+# convertTextLabelsToNumbers('data.dat')
+mockValues('data.dat', 'output.dat')
+#createDataset(dir)
 # values = findValueTypes(dir)
 # print("-----------------------------------------------------------")
 # classes = findClasses(dir)
