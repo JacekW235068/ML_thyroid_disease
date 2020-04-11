@@ -191,8 +191,8 @@ def removeColumn(filepath, columnName):
         outputFile.write(line)
     file.close()
     outputFile.close()
-    # os.remove(filepath)
-    # os.rename(r'temp.dat',filepath)
+    os.remove(filepath)
+    os.rename(r'temp.dat',filepath)
 
 def findEmptyColumns(filepath,minimumPercentage = 1, emptychar = '?'):
     minimumPercentage = minimumPercentage/100.0
@@ -257,8 +257,8 @@ def removeRangeColumns(filepath, columnNames):
         outputFile.write(line)
     file.close()
     outputFile.close()
-    # os.remove(filepath)
-    # os.rename(r'temp.dat',filepath)
+    os.remove(filepath)
+    os.rename(r'temp.dat',filepath)
 
 def getDataStatsForMocking(dataSet):
     columnIsNumeric = []
@@ -366,18 +366,15 @@ def mockValues(filepath, output):
     print("Done")
 
 dir = "thyroid-disease/"
-# removeRangeColumns('data.dat',['age','sex'])
-# convertTextLabelsToNumbers('data.dat')
 createMETAclasses(dir)
 createMETAvalues(dir)
 createDataset(dir)
+
 mockValues('data.dat', 'output.dat')
-# values = findValueTypes(dir)
-# print("-----------------------------------------------------------")
-# classes = findClasses(dir)
-# print("-----------------------------------------------------------")
-# classcount = countClasses(dir, classes)
-# print("-----------------------------------------------------------")
-# for i in range(len(classes)):
-#     if classcount[i] > 0 or all:
-#         print (classes[i] + " - \033[92m" + str(classcount[i]) + "\033[39m")
+os.rename("output.dat",'data.dat')
+empty = findEmptyColumns('data.dat')
+useless = findkeywordColumns('data.dat',"measured")
+removeRangeColumns('data.dat',empty)
+removeRangeColumns('data.dat',useless)
+
+
