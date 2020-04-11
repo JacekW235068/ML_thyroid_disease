@@ -1,4 +1,5 @@
 import functools
+from _lsprof import profiler_entry
 
 import numpy as np
 import tensorflow as tf
@@ -20,11 +21,11 @@ def getHeader(src):
 
 
 def show_batch(dataset):
-    print( type(dataset.take(1)) )
+    print("BATCH START ------- \n")
     for batch, label in dataset.take(1):
-        print(type(batch.items()))
         for key, value in batch.items():
             print("{:20s}: {}".format(key, value.numpy()))
+    print("\nBATCH -- END")
 
 
 def get_dataset(file_path, **kwargs):
@@ -58,6 +59,7 @@ class PackNumericFeatures(object):
 
 def normalize_numeric_data(data, mean, std):
     # Center the data
+    std[std == 0] = 1
     return (data - mean) / std
 
 
@@ -65,7 +67,7 @@ np.set_printoptions(precision=3, suppress=True)
 
 # data from file using copy paste function from tutorial
 raw_train_data = get_dataset('sick.data')
-raw_test_data = get_dataset('sick.data')
+raw_test_data = get_dataset('test.data')
 
 show_batch(raw_train_data)
 print("-----------------------------")
@@ -96,8 +98,8 @@ NUMERIC_FEATURES = ['age', 'TSH', 'T3', 'TT4', 'FTI', 'TBG', 'T4U']
 packed_train_data = raw_train_data.map(
     PackNumericFeatures(NUMERIC_FEATURES))
 
-#packed_test_data = raw_test_data.map(
-#   PackNumericFeatures(NUMERIC_FEATURES))
+packed_test_data = raw_test_data.map(
+    PackNumericFeatures(NUMERIC_FEATURES))
 
 show_batch(packed_train_data)
 print("-----------------------------")
@@ -121,26 +123,26 @@ print(numeric_layer(example_batch).numpy())
 print("-----------------------------")
 true_or_false = ['f', 't']
 CATEGORIES = {
-    'sex': ['M', 'F'],
-    'on thyroxine': true_or_false,
-    'query on thyroxine': true_or_false,
-    'on antithyroid medication': true_or_false,
+    'sex': ['M', 'F', '0'],
+    'on-thyroxine': true_or_false,
+    'query-on-thyroxine': true_or_false,
+    'on-antithyroid-medication': true_or_false,
     'sick': true_or_false,
     'pregnant': true_or_false,
-    'thyroid surgery': true_or_false,
-    'I131 treatment': true_or_false,
-    'query hypothyroid': true_or_false,
+    'thyroid-surgery': true_or_false,
+    'I131-treatment': true_or_false,
+    'query-hypothyroid': true_or_false,
     'lithium': true_or_false,
     'goitre': true_or_false,
     'tumor': true_or_false,
     'hypopituitary': true_or_false,
     'psych': true_or_false,
-    'TSH measured': true_or_false,
-    'TT4 measured': true_or_false,
-    'T4U measured': true_or_false,
-    'FTI measured': true_or_false,
-    'TBG measured': true_or_false,
-    'referral source': ['WEST', 'STMW', 'SVHC', 'SVI', 'SVHD', 'other']
+    'TSH-measured': true_or_false,
+    'TT4-measured': true_or_false,
+    'T4U-measured': true_or_false,
+    'FTI-measured': true_or_false,
+    'TBG-measured': true_or_false,
+    'referral-source': ['WEST', 'STMW', 'SVHC', 'SVI', 'SVHD', 'other']
 }
 
 categorical_columns = []
@@ -172,23 +174,21 @@ model = tf.keras.Sequential([
 
 model.compile(
     loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-    optimizer='adam',
+    optimizer='SGD',
     metrics=['accuracy'])
 
-train_data = packed_train_data.shuffle(500)
+train_data = packed_train_data
 test_data = packed_test_data
-
-model.fit(train_data, epochs=20)
+generated = list(test_data)
+model.fit(train_data, epochs=40)
 
 test_loss, test_accuracy = model.evaluate(test_data)
 
 print('\n\nTest Loss {}, Test Accuracy {}'.format(test_loss, test_accuracy))
+show_batch(test_data)
 
-predictions = model.predict(test_data)
+predictions = model.predict(test_data, batch_size=1, steps=1)
 
-# Show some results
-for prediction, survived in zip(predictions[:10], list(test_data)[0][1][:10]):
-    prediction = tf.sigmoid(prediction).numpy()
-    print("Predicted survival: {:.2%}".format(prediction[0]),
-          " | Actual outcome: ",
-          ("SURVIVED" if bool(survived) else "DIED"))
+for predin, labels in zip(predictions, generated[0][1]):
+    lv_sigmoid = tf.sigmoid(predin)
+    print(lv_sigmoid, 'for', labels)
