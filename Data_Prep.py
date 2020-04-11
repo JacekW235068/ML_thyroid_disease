@@ -310,13 +310,17 @@ def sum(array):
 
 def mockValues(filepath, output):
     classes = []
+    classNames = []
     classCases = []
     classStats = []
     with open("class.meta", "r") as file:
+        i = 0
         for line in file:
-            classes.append(line[:line.index('|')])
+            classes.append(str(i))
             classCases.append("")
             classStats.append([])
+            classNames.append(line[:line.index('|')])
+            i+=1
     with open(filepath, "r") as file:
         file.readline()
         for line in file:
@@ -325,14 +329,10 @@ def mockValues(filepath, output):
                 if classes[i] in line:
                     classCases[i] += line
                 i+=1
-    print("-----------------------------------------------------")
-    print(classes[0])
-    print(classCases[0])
-    print("-----------------------------------------------------")
     i = 0
     while i < len(classes):
         classStats[i] = getDataStatsForMocking(classCases[i])
-        print("finished class stats for" + classes[i])
+        print("finished class stats for " + classNames[i])
         i += 1
     print("writing output file")
     if os.path.exists(output):
