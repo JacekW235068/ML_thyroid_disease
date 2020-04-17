@@ -159,8 +159,39 @@ def merge_data_from_all_files(path):
     for i, line in enumerate(data):
         if len(classes[i]) > 1 and negative_index in classes[i]:
             classes[i].remove(negative_index)
+        if len(classes[i]) > 1:
+            continue
         result.append(line + "," + " ".join(classes[i]) + "\n")
     return result
+
+class_in_merged_data_regex = re.compile(r".*,(.*)")
+def find_class_in_merged_data_line(line):
+    class_search = class_in_merged_data_regex.search(line)
+    return int(class_search.group(1))
+
+def balance_merged_data(path, merged_data, minimalCasesCount = 1, targetCasesCount = 500):
+    classes = findClasses(path)
+    lines_per_class = list(map(lambda _: [], classes))
+
+    for line in merged_data:
+        lines_per_class[find_class_in_merged_data_line(line)].append(line)
+
+    balanced_data = []
+
+    for class_index, lines_of_class in enumerate(lines_per_class):
+        class_name = classes[class_index]
+        print("Class {} count {}".format(class_name, len(lines_of_class)))
+        if len(lines_of_class) < minimalCasesCount:
+            print("Minimal cases count not reached for class {}".format(class_name))
+            continue
+        elif len(lines_of_class) >= targetCasesCount:
+            print("Class {} extends the target, picking random {} cases.".format(class_name, targetCasesCount))
+            balanced_data.extend(random.sample(lines_of_class, targetCasesCount))
+        else:
+            print("{} cases of class {} will be randomly copied to fulfill {} target cases.".format(len(lines_of_class), class_name, targetCasesCount))
+            for _ in range(targetCasesCount):
+                balanced_data.append(random.choice(lines_of_class));
+    return balanced_data
 
 def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
     classes = findClasses(path)
@@ -168,8 +199,9 @@ def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
 
     write_dataset_header(path, fout)
     merged_data = merge_data_from_all_files(path)
+    balanced_data = balance_merged_data(path, merged_data, minimalCasesCount, targetCasesCount)
 
-    for line in merged_data:
+    for line in balanced_data:
         fout.write(line)
 
 def removeColumn(filepath, columnName):
