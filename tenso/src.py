@@ -3,11 +3,28 @@ from _lsprof import profiler_entry
 
 import numpy as np
 import tensorflow as tf
-
+import re
 import pandas as pd
 
-# labal value to predict
-LABEL_COLUMN = 'flags'
+
+def getClassNames(iv_path):
+    toRet = []
+    with open(iv_path, 'r') as file:
+        whole = file.read()
+        lines = whole.split('\n')
+        dash_filter = re.compile(r"\|.*")
+        space_filter = re.compile(r" +")
+        for curr_line in lines:
+            curr_line = curr_line.rstrip()
+            if len(curr_line) != 0:
+                curr_line = dash_filter.sub('', curr_line)
+                curr_line = space_filter.sub('_', curr_line)
+                toRet.append(curr_line)
+
+    if len(toRet) == 0:
+        print('Failed to read data')
+    else:
+        return toRet
 
 
 def getHeader(src):
@@ -26,6 +43,10 @@ def show_batch(dataset):
         for key, value in batch.items():
             print("{:20s}: {}".format(key, value.numpy()))
     print("\nBATCH -- END")
+
+
+# labal value to predict
+LABEL_COLUMN = getClassNames('../class.meta')
 
 
 def get_dataset(file_path, **kwargs):
@@ -59,53 +80,34 @@ class PackNumericFeatures(object):
 
 def normalize_numeric_data(data, mean, std):
     # Center the data
-    std[std == 0] = 1
-    return (data - mean) / std
+
+    return (data - mean) / (std + 0.0000001)
 
 
 np.set_printoptions(precision=3, suppress=True)
 
 # data from file using copy paste function from tutorial
-raw_train_data = get_dataset('sick.data')
-raw_test_data = get_dataset('test.data')
+raw_train_data = get_dataset('../tonetwork.csv')
+#raw_test_data = get_dataset('../tonetwork.csv')
 
 show_batch(raw_train_data)
 print("-----------------------------")
 
 # DATA PREPROCESSING
 
-SELECT_COLUMNS = ['flags', 'age', 'TSH', 'T3', 'TT4', 'T4U', 'FTI', 'TBG']
-DEFAULTS = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-temp_dataset = get_dataset('sick.data',
-                           select_columns=SELECT_COLUMNS,
-                           column_defaults=DEFAULTS)
-
-show_batch(temp_dataset)
-print(" BATCH END -----------------------------")
-
-packed_dataset = temp_dataset.map(pack)
-
-for features, labels in packed_dataset.take(1):
-    print(features.numpy())
-    print()
-    print(labels.numpy())
-print("-----------------------------")
-
-example_batch, labels_batch = next(iter(temp_dataset))
-
 NUMERIC_FEATURES = ['age', 'TSH', 'T3', 'TT4', 'FTI', 'TBG', 'T4U']
 
 packed_train_data = raw_train_data.map(
     PackNumericFeatures(NUMERIC_FEATURES))
 
-packed_test_data = raw_test_data.map(
-    PackNumericFeatures(NUMERIC_FEATURES))
+#packed_test_data = raw_test_data.map(
+#    PackNumericFeatures(NUMERIC_FEATURES))
 
 show_batch(packed_train_data)
 print("-----------------------------")
 
 example_batch, labels_batch = next(iter(packed_train_data))
-desc = pd.read_csv('sick.data')[NUMERIC_FEATURES].describe()
+desc = pd.read_csv('../tonetwork.csv')[NUMERIC_FEATURES].describe()
 
 MEAN = np.array(desc.T['mean'])
 STD = np.array(desc.T['std'])
@@ -169,12 +171,12 @@ model = tf.keras.Sequential([
     preprocessing_layer,
     tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(1),
+    tf.keras.layers.Dense(len(LABEL_COLUMN)),
 ])
 
 model.compile(
     loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-    optimizer='SGD',
+    optimizer='adam',
     metrics=['accuracy'])
 
 train_data = packed_train_data
@@ -191,4 +193,4 @@ predictions = model.predict(test_data, batch_size=1, steps=1)
 
 for predin, labels in zip(predictions, generated[0][1]):
     lv_sigmoid = tf.sigmoid(predin)
-    print(lv_sigmoid, 'for', labels)
+    print(lv_sigmoid)

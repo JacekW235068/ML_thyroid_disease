@@ -194,7 +194,7 @@ def balance_merged_data(path, merged_data, minimalCasesCount = 1, targetCasesCou
     return balanced_data
 
 def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
-    classes = findClasses(path)
+    #classes = findClasses(path)
     fout = open("data.dat", "wt")
 
     write_dataset_header(path, fout)
@@ -397,16 +397,27 @@ def mockValues(filepath, output):
                 outputFile.write(','.join(line) + '\n')
     print("Done")
 
+def oneClassOnly(filepath, output):
+    with open(filepath, "r") as file:
+        with open(output, "wt") as outputFile:
+            for line in file:
+                line = line.strip().split(',')
+                line[-1] = line[-1].split(' ')[0]
+                line = ','.join(line)
+                outputFile.write(line + '\n')
+    
 dir = "thyroid-disease/"
-createMETAclasses(dir)
-createMETAvalues(dir)
-createDataset(dir)
+# createMETAclasses(dir)
+# createMETAvalues(dir)
+# createDataset(dir)
 
-mockValues('data.dat', 'output.dat')
-os.rename("output.dat",'data.dat')
-empty = findEmptyColumns('data.dat')
-useless = findkeywordColumns('data.dat',"measured")
-removeRangeColumns('data.dat',empty)
-removeRangeColumns('data.dat',useless)
+# empty = findEmptyColumns('data.dat')
+# mockValues('data.dat', 'output.dat')
+# os.remove('data.dat')
+# os.rename("output.dat",'data.dat')
 
+# useless = findkeywordColumns('data.dat',"measured")
+# removeRangeColumns('data.dat',empty)
+# removeRangeColumns('data.dat',useless)
 
+oneClassOnly('data.dat', 'data.csv')
