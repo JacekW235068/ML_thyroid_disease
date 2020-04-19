@@ -6,8 +6,11 @@ from torch.utils import data
 import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
-import numpy as np #klestionable 
+import numpy as np #klestionable
 
+from sklearn.ensemble import RandomForestClassifier
+
+NUMERIC_FEATURES = ['age', 'TSH', 'T3', 'TT4', 'FTI', 'T4U','referral_source']
 depth = 0
 def LOG(message):
     print(" "*depth*2 + str(message))
@@ -70,7 +73,7 @@ def getOneColumn(name, filepath, prefix = ""):
     with open(filepath, 'rt') as file:
         header = file.readline().strip().split(',')
         selected_column = header.index(name)
-        
+
         for line in file:
             line = line.strip().split(',')
             val = int(line[selected_column])
@@ -95,9 +98,29 @@ def csvToData(NUMERIC_FEATURES = ['age', 'TSH', 'T3', 'TT4', 'FTI', 'T4U','refer
     depth -= 1
     return x_train, y_train #as numpy
 
+def getCategoricLabels(filepath,NUMERIC_FEATURES = ['age', 'TSH', 'T3', 'TT4', 'FTI', 'T4U','referral_source']):
+    with open(filepath, 'rt') as file:
+        header = file.readline().strip().split(',')
+        for f in NUMERIC_FEATURES:
+            header.remove(f)
+        return header
+
+def featureImportances(x, y):
+    clf = RandomForestClassifier()
+    clf.fit(x, y)
+    return clf.feature_importances_
+
+def first(tup):
+    return tup[0]
+
 np.set_printoptions(precision=3, suppress=True)
 LOG("Getting data from csv...")
 x,y = csvToData(prefix="  ")
+
+LOG("Feature importances: ")
+for label, importance in sorted(zip(featureImportances(x, y), NUMERIC_FEATURES + getCategoricLabels("data.csv")), key=first):
+    LOG("{}: {}".format(label, importance))
+
 LOG("Found " + str(len(x)) + " records")
 LOG("Creating datasets...")
 tensor_x = torch.Tensor(x)
@@ -137,7 +160,7 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(32,32)
         self.fc3 = nn.Linear(32,32)
         self.fc4 = nn.Linear(32,14)
-    
+
     def forward(self,x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
