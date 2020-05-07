@@ -406,7 +406,7 @@ def oneClassOnly(filepath, output):
                 line = ','.join(line)
                 outputFile.write(line + '\n')
     
-dir = "thyroid-disease/"
+# dir = "thyroid-disease/"
 # createMETAclasses(dir)
 # createMETAvalues(dir)
 # createDataset(dir)
@@ -420,4 +420,4 @@ dir = "thyroid-disease/"
 # removeRangeColumns('data.dat',empty)
 # removeRangeColumns('data.dat',useless)
 
-oneClassOnly('data.dat', 'data.csv')
+# oneClassOnly('data.dat', 'data.csv')
