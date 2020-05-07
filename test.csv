@@ -1,8 +1,0 @@
-age,sex,on_thyroxine,query_on_thyroxine,on_antithyroid_medication,sick,pregnant,thyroid_surgery,I131_treatment,query_hypothyroid,query_hyperthyroid,lithium,goitre,tumor,hypopituitary,psych,TSH,T3,TT4,T4U,FTI,referral_source,class
-81,M,f,f,f,f,f,f,f,f,f,f,f,f,f,f,1.9,0.3,102,0.96,106,SVI,1
-54,F,f,f,f,f,f,f,f,f,f,f,f,f,f,f,3.1,1.714,104,0.9,116,other,1
-55,M,f,f,f,f,f,f,f,f,f,f,f,f,f,f,0.2,1.8,134,1.02,131,SVI,1
-63,F,f,f,f,f,f,f,f,f,f,f,f,f,f,f,0.03,5.5,199,1.05,190,other,2
-60,M,t,f,f,f,f,f,f,f,f,f,f,f,f,f,13,1.4,57,0.62,92,other,7
-25,F,f,f,f,f,f,f,f,f,f,f,f,f,f,f,0.3,3.1,129,0.85,107.834,other,12
-73,F,f,f,f,f,f,f,f,f,f,f,f,f,f,f,1.9,1.5,113,1.06,106,SVI,1
