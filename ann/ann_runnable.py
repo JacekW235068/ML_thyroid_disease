@@ -13,7 +13,7 @@ def dataset_splitted_half(x_tensor, y_tensor, size):
     return trainset, testset
 
 
-def train_network(trainSet, testSet, listNeurons, stepMomentum, epochCount, countFeatures):
+def train_network(clList, trainSet, testSet, listNeurons, stepMomentum, epochCount, countFeatures):
     listResults = []
     Result = tuple() 
 
@@ -43,6 +43,7 @@ def train_network(trainSet, testSet, listNeurons, stepMomentum, epochCount, coun
                         currOptimizer.step()
                 ann.ann_network.depth -= 1
                 ann.ann_network.LOG("--- LOSS: " + str(loss.item()) + " ---")
+                clearClassList( clList )
                 hit = 0
                 total = 0
                 with torch.no_grad():
@@ -51,24 +52,35 @@ def train_network(trainSet, testSet, listNeurons, stepMomentum, epochCount, coun
                         output = curr_net( x ) 
                         for y_index,i in enumerate(output):
                             if torch.argmax( i ) == y[y_index]:
+                                clList[ y[y_index] ][2] += 1 
                                 hit += 1
                             total += 1
+                            clList[ y[y_index] ][1] += 1
+
                     perc = (hit*100)/total
-                ann.ann_network.LOG("--- HIT/TOTAL RATIO: " + str(perc) + " ---" ) 
+                ann.ann_network.LOG("--- HIT/TOTAL PERC: " + str(perc) + " ---" ) 
+                printClassInfo( clList ) 
+                Result = [ loss.item(), currLearningRate, currMomentum, currNeuron, hit, total, epochCount, countFeatures ]
+                for elem in clList:
+                    Result = Result + [ elem[1], elem[2] ] 
 
-                
-                Result = ( loss.item(), currLearningRate, currMomentum, currNeuron, hit, total, epochCount, countFeatures )
                 listResults.append( Result )
-
                 currMomentum += stepMomentum
         ann.ann_network.depth -= 1
 
     ann.ann_network.depth -= 1
     return listResults 
 #   loss, learningrate, momentum, neuron, hit, total, epoch 
-def saveResults( szPath : str, lResults : list):
+def saveResults( szPath : str, lResults : list, classList):
     with open(szPath, "w") as f:
-        f.write("LOSS,LEARNING_RATE,MOMENTUM,NEURON_COUNT,HIT,TOTAL,EPOCH,FEATURE_COUNT\n")
+        f.write("LOSS,LEARNING_RATE,MOMENTUM,NEURON_COUNT,HIT,TOTAL,EPOCH,FEATURE_COUNT,")
+        for elem in classList[:-1]:
+            f.write(str(elem[0])+'_totals,')
+            f.write(str(elem[0])+'_hits,')
+
+        f.write(str(classList[-1][0])+'_totals,')
+        f.write(str(classList[-1][0])+'_hit\n')
+
         for result in lResults:
             for element in result[:-1]:
                 f.write( str(element)+",") 
@@ -87,7 +99,34 @@ def  filterFeatures( listNeeded : list, x_data):
 
     return numpy.array(toRet)
 
+import re 
+def clearClassList(classList):
+    for elem in classList:
+        elem[1] = 0
+        elem[2] = 0
+    return
 
+def getClassList(szClassMeta):
+    toRet = []
+    with open(szClassMeta, "r") as f:
+        while True:
+            line = f.readline()
+            if line == "":
+                break
+
+            clLine = re.split('\\|' , line)
+            clLine[0] = clLine[0].replace(' ', '_')
+            toRet.append( [clLine[0], 0, 0] )
+
+    return toRet
+
+def printClassInfo(classList):
+    for elem in classList:
+        ann.ann_network.LOG(" =============================================================================")
+        ann.ann_network.LOG("Klasa: " + elem[0] + "\t Total: " + str(elem[1]) + "\t Hits: " + str(elem[2]) )
+        ann.ann_network.LOG("Perc: " + str( float(elem[2]) * 100 /float(elem[1])) )
+    ann.ann_network.LOG(" =============================================================================")
+    return 
 def start( szDestination, listNeurons, listFeatures, stepMomentum ):
 
     ann.ann_network.LOG("--- Tworzenie folderów ---")
@@ -99,7 +138,8 @@ def start( szDestination, listNeurons, listFeatures, stepMomentum ):
 
     ann.ann_network.LOG("--- Pobieranie danych ---")
     x_csv, y_csv = ann.ann_network.csvToData()
-
+    clList = getClassList('class.meta')
+    print(clList)
     ann.ann_network.LOG("--- Filtruj cechy ---")
     featuresAction = []
     iterate = 0 
@@ -119,12 +159,12 @@ def start( szDestination, listNeurons, listFeatures, stepMomentum ):
         # ---------------------------------
         # Trenowanie sieci
         ann.ann_network.LOG("--- Trenowanie sieci na danych trenujących i testowanie na testujących ---")
-        train_wtrain_res = train_network( test, train, listNeurons, stepMomentum, 10, len(x_filtered[0]) ) 
-        ann.ann_network.LOG("--- Trenowanie sieci na danych testujących i testowanie na trenujących ---")
-        train_wtest_res = train_network( train, test, listNeurons, stepMomentum, 10, len(x_filtered[0]) )
-        ann.ann_network.LOG("--- Koniec trenowania, zapisywanie ---")
-        saveResults(szDestination + "/train/output_test_" + str(iterate) + ".csv", train_wtrain_res )
-        saveResults(szDestination + "/test/output_train_" + str(iterate) + ".csv", train_wtest_res )
+        train_wtrain_res = train_network( clList, test, train, listNeurons, stepMomentum, 10, len(x_filtered[0]) ) 
+        #ann.ann_network.LOG("--- Trenowanie sieci na danych testujących i testowanie na trenujących ---")
+        #train_wtest_res = train_network( clList, train, test, listNeurons, stepMomentum, 10, len(x_filtered[0]) )
+        #ann.ann_network.LOG("--- Koniec trenowania, zapisywanie ---")
+        saveResults(szDestination + "/train/output_test_" + str(iterate) + ".csv", train_wtrain_res, clList )
+        #saveResults(szDestination + "/test/output_train_" + str(iterate) + ".csv", train_wtest_res )
         train_wtrain_res = None  # Hehe GCed
         train_wtest_res = None 
         iterate += 1

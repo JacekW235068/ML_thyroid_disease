@@ -7,7 +7,7 @@ if __name__ == '__main__':
             [   
                 'TSH', 'FTI', 'TT4', 'T3',
                 'T4U', 'age', 'on_thyroxine'
-                ,'referall_source','pregnant',
+                ,'referral_source','pregnant',
                 'sex', 'tumor', 'query_hyperthyroid', 
                 'query_hypothyroid', 'thyroid_surgery', 
                 'psych', 'sick', 'query_on_thyroxine', 
