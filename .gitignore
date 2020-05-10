@@ -3,3 +3,8 @@ env/
 venv/
 *.meta
 *.dat
+*.csv
+.idea/
+ann/__pycache__/
+output_normal.csv
+data.csv

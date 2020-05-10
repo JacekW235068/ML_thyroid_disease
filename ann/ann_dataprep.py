@@ -6,7 +6,9 @@ import random
 import io
 import statistics
 
-def findValueTypes(path):
+def findValueTypes(path, silent = False):
+    if silent:
+        sys.stdout = open(os.devnull, 'w')
     valuetypeslist = []
     regexp1 = re.compile(r"[A-Z,a-z,',',\s,0-9]*\:\s*[A-Z,a-z,',',\s]*\.")
     onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
@@ -28,9 +30,13 @@ def findValueTypes(path):
                             valuetypeslist.append(expline)
                             countAdded += 1
             print("File: \033[94m" + fileName + "\033[39m contains \033[92m" + str(count) + "\033[39m value types including \033[92m" + str(countAdded) + "\033[39m new.")
+    if silent:
+        sys.stdout = sys.__stdout__ 
     return valuetypeslist
 
-def findClasses(path):
+def findClasses(path, silent = False):
+    if silent:
+        sys.stdout = open(os.devnull, 'w')
     classlist = []
     regexp1 = re.compile(r"[A-Z,a-z,',',\s,0-9]*\:\s*[A-Z,a-z,',',\s]*\.")
     onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
@@ -53,6 +59,8 @@ def findClasses(path):
                                     countAdded += 1
                                     classlist.append(Class)
             print("File: \033[94m" + fileName + "\033[39m contains \033[92m" + str(count) + "\033[39m classes including \033[92m" + str(countAdded) + "\033[39m new.")
+    if silent:
+        sys.stdout = sys.__stdout__
     return classlist
 
 
@@ -95,7 +103,7 @@ def createMETAclasses(path, minimalCasesCount = -1, silent = False):
     classes = findClasses(path)
     print("Done.")
     print("Finding cases...")
-    classcount = countClasses(dir, classes)
+    classcount = countClasses(path, classes)
     print("Done.")
     print("Writing to \033[94mclass.meta\033[39m ...")
     fout = open("class.meta", "wt")
@@ -107,7 +115,7 @@ def createMETAclasses(path, minimalCasesCount = -1, silent = False):
         sys.stdout = sys.__stdout__
 
 def write_dataset_header(path, fout):
-    values = findValueTypes(path)
+    values = findValueTypes(path,silent = True)
     for value in values:
         fout.write(value.split('|')[0].replace(" ", "_"))
         fout.write(',')
@@ -127,7 +135,7 @@ def get_data_without_class(line):
         return search.group(1)
 
 def merge_data_from_all_files(path):
-    classNames = findClasses(path)
+    classNames = findClasses(path,silent = True)
     datafiles = [f for f in listdir(path) if isfile(join(path, f)) and ".data" in f]
     testfiles = [f for f in listdir(path) if isfile(join(path, f)) and ".test" in f]
 
@@ -170,7 +178,7 @@ def find_class_in_merged_data_line(line):
     return int(class_search.group(1))
 
 def balance_merged_data(path, merged_data, minimalCasesCount = 1, targetCasesCount = 500):
-    classes = findClasses(path)
+    classes = findClasses(path,silent = True)
     lines_per_class = list(map(lambda _: [], classes))
 
     for line in merged_data:
@@ -180,17 +188,16 @@ def balance_merged_data(path, merged_data, minimalCasesCount = 1, targetCasesCou
 
     for class_index, lines_of_class in enumerate(lines_per_class):
         class_name = classes[class_index]
-        print("Class {} count {}".format(class_name, len(lines_of_class)))
         if len(lines_of_class) < minimalCasesCount:
             print("Minimal cases count not reached for class {}".format(class_name))
             continue
         elif len(lines_of_class) >= targetCasesCount:
-            print("Class {} extends the target, picking random {} cases.".format(class_name, targetCasesCount))
+            print("Class \033[91m{}\033[39m extends the target, picking random \033[92m{}\033[39m cases.".format(class_name, targetCasesCount))
             balanced_data.extend(random.sample(lines_of_class, targetCasesCount))
         else:
-            print("{} cases of class {} will be randomly copied to fulfill {} target cases.".format(len(lines_of_class), class_name, targetCasesCount))
+            print("\033[92m{}\033[39m cases of class \033[91m{}\033[39m will be randomly copied to fulfill {} target cases.".format(len(lines_of_class), class_name, targetCasesCount))
             for _ in range(targetCasesCount):
-                balanced_data.append(random.choice(lines_of_class));
+                balanced_data.append(random.choice(lines_of_class))
     return balanced_data
 
 def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
@@ -364,7 +371,7 @@ def mockValues(filepath, output):
     i = 0
     while i < len(classes):
         classStats[i] = getDataStatsForMocking(classCases[i])
-        print("finished class stats for " + classNames[i])
+        print("finished class stats for \033[91m" + classNames[i] + "\033[39m")
         i += 1
     print("writing output file")
     if os.path.exists(output):
@@ -384,7 +391,7 @@ def mockValues(filepath, output):
                         if classStats[i][0][j]:
                             start = classStats[i][4][j] - classStats[i][3][j]
                             stop = classStats[i][4][j] + classStats[i][3][j]
-                            line[j] = str(round(random.uniform(start, stop),3))
+                            line[j] = str(abs(round(random.uniform(start, stop),3)))
                         else:
                             sumOfCases = sum(classStats[i][2][j])
                             rand = random.random()*sumOfCases
@@ -406,18 +413,29 @@ def oneClassOnly(filepath, output):
                 line = ','.join(line)
                 outputFile.write(line + '\n')
     
-# dir = "thyroid-disease/"
-# createMETAclasses(dir)
-# createMETAvalues(dir)
-# createDataset(dir)
-
-# empty = findEmptyColumns('data.dat')
-# mockValues('data.dat', 'output.dat')
-# os.remove('data.dat')
-# os.rename("output.dat",'data.dat')
-
-# useless = findkeywordColumns('data.dat',"measured")
-# removeRangeColumns('data.dat',empty)
-# removeRangeColumns('data.dat',useless)
-
-# oneClassOnly('data.dat', 'data.csv')
+def textToNum(filepath):
+    columnIsNumeric = []
+    columnValues = []
+    with open("values.meta", "r") as file:
+        for line in file:
+            line = line[line.index('|')+1:]
+            if "continuous" in line:
+                columnIsNumeric.append(True)
+            else:
+                columnIsNumeric.append(False)
+            columnValues.append([])
+    with open(filepath, "rt") as file:
+        with open('output.csv', "wt") as outputFile:
+            outputFile.write(file.readline())
+            for line in file:
+                line = line.strip().split(',')
+                i = 0
+                while i < len(line)-1:
+                    if not columnIsNumeric[i]:
+                        if line[i] not in columnValues[i]:
+                            columnValues[i].append(line[i])
+                        line[i] = str(columnValues[i].index(line[i]))
+                    i += 1
+                line = ','.join(line)
+                outputFile.write(line + '\n')
+            
