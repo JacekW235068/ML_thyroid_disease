@@ -20,7 +20,6 @@ def train_network(clList, trainSet, testSet, listNeurons, stepMomentum, epochCou
     ann.ann_network.depth += 1
     for currNeuron in listNeurons:
         ann.ann_network.LOG("--- Tworzenie sieci z liczba neuronow: " + str(currNeuron) +  " ---")
-        print(countFeatures)
         curr_net =  ann.ann_network.Net(countFeatures,  currNeuron ) 
         listLearningRates = [0.001]
         ann.ann_network.depth += 1
@@ -126,9 +125,13 @@ def printClassInfo(classList):
         ann.ann_network.LOG("Klasa: " + elem[0] + "\t Total: " + str(elem[1]) + "\t Hits: " + str(elem[2]) )
         ann.ann_network.LOG("Perc: " + str( float(elem[2]) * 100 /float(elem[1])) )
     ann.ann_network.LOG(" =============================================================================")
-    return 
-def start( szDestination, listNeurons, listFeatures, stepMomentum ):
+    return
+import sys 
+def disable_output():
+    devNull = open(os.devnull, "w")
+    sys.stdout = devNull
 
+def start( szDestination, listNeurons, listFeatures, stepMomentum ):
     ann.ann_network.LOG("--- Tworzenie folderów ---")
 
     if not os.path.isdir( szDestination ):
@@ -139,7 +142,6 @@ def start( szDestination, listNeurons, listFeatures, stepMomentum ):
     ann.ann_network.LOG("--- Pobieranie danych ---")
     x_csv, y_csv = ann.ann_network.csvToData()
     clList = getClassList('class.meta')
-    print(clList)
     ann.ann_network.LOG("--- Filtruj cechy ---")
     featuresAction = []
     iterate = 0 
@@ -160,11 +162,11 @@ def start( szDestination, listNeurons, listFeatures, stepMomentum ):
         # Trenowanie sieci
         ann.ann_network.LOG("--- Trenowanie sieci na danych trenujących i testowanie na testujących ---")
         train_wtrain_res = train_network( clList, test, train, listNeurons, stepMomentum, 10, len(x_filtered[0]) ) 
-        #ann.ann_network.LOG("--- Trenowanie sieci na danych testujących i testowanie na trenujących ---")
-        #train_wtest_res = train_network( clList, train, test, listNeurons, stepMomentum, 10, len(x_filtered[0]) )
-        #ann.ann_network.LOG("--- Koniec trenowania, zapisywanie ---")
+        ann.ann_network.LOG("--- Trenowanie sieci na danych testujących i testowanie na trenujących ---")
+        train_wtest_res = train_network( clList, train, test, listNeurons, stepMomentum, 10, len(x_filtered[0]) )
+        ann.ann_network.LOG("--- Koniec trenowania, zapisywanie ---")
         saveResults(szDestination + "/train/output_test_" + str(iterate) + ".csv", train_wtrain_res, clList )
-        #saveResults(szDestination + "/test/output_train_" + str(iterate) + ".csv", train_wtest_res )
+        saveResults(szDestination + "/test/output_train_" + str(iterate) + ".csv", train_wtest_res, clList )
         train_wtrain_res = None  # Hehe GCed
         train_wtest_res = None 
         iterate += 1

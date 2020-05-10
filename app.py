@@ -1,6 +1,7 @@
 import ann.ann_runnable 
 import ann.ann_menu
 if __name__ == '__main__':
+    ann.ann_runnable.disable_output()
     ann.ann_runnable.start(
             "output", 
             [8],
