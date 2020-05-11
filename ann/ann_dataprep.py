@@ -196,8 +196,14 @@ def balance_merged_data(path, merged_data, minimalCasesCount = 1, targetCasesCou
             balanced_data.extend(random.sample(lines_of_class, targetCasesCount))
         else:
             print("\033[92m{}\033[39m cases of class \033[91m{}\033[39m will be randomly copied to fulfill {} target cases.".format(len(lines_of_class), class_name, targetCasesCount))
+            emptyClassLine = lines_of_class[0].strip().split(',')
+            i=0
+            while i < len(emptyClassLine)-1:
+                emptyClassLine[i] = '?'
+                i += 1
+            emptyClassLine = ','.join(emptyClassLine) + "\n"
             for _ in range(targetCasesCount):
-                balanced_data.append(random.choice(lines_of_class))
+                balanced_data.append(emptyClassLine)
     return balanced_data
 
 def createDataset(path, minimalCasesCount = 1, targetCasesCount = 500):
