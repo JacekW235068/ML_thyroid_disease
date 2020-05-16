@@ -175,17 +175,15 @@ def launchConfusion(szDestination, neuronCount, momentum, listFeatures):
     results = []
     avg_rest = []
     avg_perc = []
-
+    ann.ann_network.LOG("--- Tworzenie neuronów we/wy ---")
+    x_filtered = filterFeatures( listFeatures , x_csv)
+    x_tensor = torch.Tensor(x_filtered)
+    y_tensor = torch.from_numpy(y_csv)
     for i in range(5):
-        ann.ann_network.LOG("--- Tworzenie neuronów we/wy ---")
-        x_filtered = filterFeatures( listFeatures , x_csv)
-        x_tensor = torch.Tensor(x_filtered)
-        y_tensor = torch.from_numpy(y_csv)
         train, test = dataset_splitted_half(x_tensor, y_tensor, 4)
         perc, matrix = genConfusionMatrix( clLabels, momentum, train, test, neuronCount, len(x_filtered[0]) )
         results.append(matrix)  
         avg_perc.append(perc)
-
 
     for i in range( len(results[0]) ):
         avg_rest.append( [0] * len(results[0][0]) )
